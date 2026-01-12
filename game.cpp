@@ -4,18 +4,20 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctime>
 #include "game.h"
 #include "popup.h"
+
 using namespace std;
 
-#define DELAY 15000 //define the delay between each iteration in the main while loop (tuned for better responsiveness)
+#define DELAY 15000
 
 int game_Window_Size_X = 19;
 int game_Window_Size_Y = 50;
 int score = 0;
 int lives = 10;
 
-class Monster{
+class Monster {
 public:
     int monsterx, monstery;
     int move_counter = 0;
@@ -26,146 +28,126 @@ public:
     };
     bool correct_shot = false;
 
-    void initialise(int monsterx, int monstery){
+    void initialise(int monsterx, int monstery) {
         this->monsterx = monsterx;
         this->monstery = monstery;
     }
-    void update(WINDOW* window){
+
+    void update(WINDOW* window) {
         move_counter++;
         if (move_counter >= 3) {
             monsterx--;
             move_counter = 0;
         }
     }
-    void draw(WINDOW* window){
+
+    void draw(WINDOW* window) {
         for (int i = 0; i < 3; ++i) {
             mvwprintw(window, monstery + i, monsterx, "%s", monster_shape[i].c_str());
         }
     }
-    void erase(WINDOW* window){
+
+    void erase(WINDOW* window) {
         for (int i = 0; i < 3; ++i) {
             mvwprintw(window, monstery + i, monsterx, "%s", "     ");
         }
     }
-    int monsterX(){ return monsterx; }
-    int monsterY(){ return monstery; }
+
+    int monsterX() { return monsterx; }
+    int monsterY() { return monstery; }
     int width() const { return 5; }
     int height() const { return 3; }
-    // Check if a given (x, y) hits any part of the monster
+
     bool isHit(int x, int y) const {
         return (x >= monsterx && x < monsterx + width() &&
                 y >= monstery && y < monstery + height());
     }
-    // Check if this monster overlaps with another
-    bool overlapsWith(const Monster& other) const {
-        for (int i = 0; i < height(); ++i) {
-            for (int j = 0; j < width(); ++j) {
-                int x1 = monsterx + j;
-                int y1 = monstery + i;
-                for (int oi = 0; oi < other.height(); ++oi) {
-                    for (int oj = 0; oj < other.width(); ++oj) {
-                        int x2 = other.monsterx + oj;
-                        int y2 = other.monstery + oi;
-                        if (x1 == x2 && y1 == y2) return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
 };
-class Bullet{
+
+class Bullet {
 public:
     int bulletx, bullety;
     string bullet_string = "=";
 
-    void initialise(int bulletx, int bullety){
-        this -> bulletx = bulletx;
-        this -> bullety = bullety;
+    void initialise(int bulletx, int bullety) {
+        this->bulletx = bulletx;
+        this->bullety = bullety;
     }
 
-    void draw(WINDOW* window){
-        mvwprintw(window, bullety, bulletx,"%s",bullet_string.c_str());
+    void draw(WINDOW* window) {
+        mvwprintw(window, bullety, bulletx, "%s", bullet_string.c_str());
     }
 
-    void update(WINDOW* window){
-            //usleep(DELAY);
-            bulletx += 1;
+    void update(WINDOW* window) {
+        bulletx += 1;
     }
 
-    void erase(WINDOW* window){
+    void erase(WINDOW* window) {
         mvwprintw(window, bullety, bulletx, " ");
     }
 
-    int bulletX(){
-        return bulletx;
-    }
-    int bulletY(){
-        return bullety;
-    }
-
+    int bulletX() { return bulletx; }
+    int bulletY() { return bullety; }
 };
-class Pistol{
+
+class Pistol {
 public:
     int pistolx, pistoly;
     string pistol_string_1 = "_______";
     string pistol_string_2 = "| _____|";
     string pistol_string_3 = "|_|";
 
-    void initialise(int pistolx, int pistoly){
-        this -> pistoly = pistoly;
-        this -> pistolx = pistolx;
+    void initialise(int pistolx, int pistoly) {
+        this->pistoly = pistoly;
+        this->pistolx = pistolx;
     }
 
     void draw(WINDOW* window) {
-        mvwprintw(window, pistoly, pistolx,"%s",pistol_string_1.c_str());
-        mvwprintw(window, pistoly + 1, pistolx,"%s",pistol_string_2.c_str());
-        mvwprintw(window, pistoly + 2, pistolx,"%s",pistol_string_3.c_str());
+        mvwprintw(window, pistoly, pistolx, "%s", pistol_string_1.c_str());
+        mvwprintw(window, pistoly + 1, pistolx, "%s", pistol_string_2.c_str());
+        mvwprintw(window, pistoly + 2, pistolx, "%s", pistol_string_3.c_str());
     }
 
     void updatePistol(int input) {
-        switch(input) {
+        switch (input) {
             case KEY_UP:
-                if(pistoly > 1) {
-                    pistoly--;
-                }
+                if (pistoly > 1) pistoly--;
                 break;
             case KEY_DOWN:
-                if(pistoly < game_Window_Size_X -5) {
-                    pistoly++;
-                }
+                if (pistoly < game_Window_Size_X - 5) pistoly++;
                 break;
             default:
                 break;
         }
     }
-    int pistolY(){
-        return pistoly;
-    }
-    void erase(WINDOW *window){
-        mvwprintw(window, pistoly, pistolx,"%s", "       ");
-        mvwprintw(window, pistoly + 1, pistolx,"%s", "        ");
-        mvwprintw(window, pistoly + 2, pistolx,"%s", "       ");
+
+    int pistolY() { return pistoly; }
+
+    void erase(WINDOW* window) {
+        mvwprintw(window, pistoly, pistolx, "%s", "       ");
+        mvwprintw(window, pistoly + 1, pistolx, "%s", "        ");
+        mvwprintw(window, pistoly + 2, pistolx, "%s", "       ");
     }
 };
 
-int game_main(){
+int game_main() {
     bool isLost = false;
 
-    WINDOW* gameWindow = newwin(game_Window_Size_X, game_Window_Size_Y, 3,0);
-    WINDOW* scoreWindow = newwin(3, game_Window_Size_Y, 0,0);
+    WINDOW* gameWindow = newwin(game_Window_Size_X, game_Window_Size_Y, 3, 0);
+    WINDOW* scoreWindow = newwin(3, game_Window_Size_Y, 0, 0);
     WINDOW* instructionsWindow = newwin(game_Window_Size_X + 3, 35, 0, 50);
 
     keypad(stdscr, TRUE);
     noecho();
     curs_set(0);
     nodelay(stdscr, TRUE);
+
     box(gameWindow, 0, 0);
     box(scoreWindow, 0, 0);
     box(instructionsWindow, 0, 0);
+
     srand(time(NULL));
 
-    //const strings
     mvwprintw(gameWindow, 8, 18, "%s", "PRESS S TO START");
     mvwprintw(scoreWindow, 1, 2, "%s", "Score:");
     mvwprintw(scoreWindow, 1, 40, "%s", "Lives:");
@@ -185,22 +167,16 @@ int game_main(){
     mvwprintw(instructionsWindow, 14, 1, "%s", "life everytime you miss the ");
     mvwprintw(instructionsWindow, 15, 1, "%s", "target.");
 
-    //refresh all windows to display
     wrefresh(gameWindow);
     wrefresh(scoreWindow);
     wrefresh(instructionsWindow);
-    
-    //initialise pistol
-    Pistol pistol;
-    pistol.initialise(1,1);
 
-    //initialise bullets and monsters
+    Pistol pistol;
+    pistol.initialise(1, 1);
+
     vector<Bullet> bullets;
     vector<Monster> monsters;
 
-    wrefresh(gameWindow);
-
-    //handle condition for starting the game
     int pre_game_input = 0;
     bool start_game = false;
     while (!start_game) {
@@ -219,141 +195,141 @@ int game_main(){
         usleep(10000);
     }
 
-    while(start_game){
-        //score window updates
+    while (start_game) {
         mvwprintw(scoreWindow, 1, 9, "%s", "         ");
         mvwprintw(scoreWindow, 1, 9, "%i", score);
         mvwprintw(scoreWindow, 1, 47, "%s", "  ");
         mvwprintw(scoreWindow, 1, 47, "%i", lives);
         wrefresh(scoreWindow);
 
-        //game window pistol print and monster initialisation
         pistol.draw(gameWindow);
-        int monster_ypos = rand() % (game_Window_Size_X - 5); // leave space for 3-line monster
+
+        int monster_ypos = rand() % (game_Window_Size_X - 5);
         int isMonsterCreate = rand() % 49;
         if (isMonsterCreate == 1) {
             Monster newMonster;
-            newMonster.initialise(game_Window_Size_Y - 7, monster_ypos + 2); // leave space for border
-            // Check for overlap
+            newMonster.initialise(game_Window_Size_Y - 7, monster_ypos + 2);
+
             bool overlap = false;
             for (const auto& m : monsters) {
-                if (abs(m.monsterx - newMonster.monsterx) < newMonster.width() &&
-                    abs(m.monstery - newMonster.monstery) < newMonster.height()) {
+                bool xOverlap = !(newMonster.monsterx + newMonster.width() <= m.monsterx ||
+                                  m.monsterx + m.width() <= newMonster.monsterx);
+                bool yOverlap = !(newMonster.monstery + newMonster.height() <= m.monstery ||
+                                  m.monstery + m.height() <= newMonster.monstery);
+                if (xOverlap && yOverlap) {
                     overlap = true;
                     break;
                 }
             }
+
             if (!overlap) {
                 monsters.push_back(newMonster);
-                newMonster.draw(gameWindow);
+                monsters.back().draw(gameWindow);
             }
         }
 
-    //handle monster updates
-    if(!monsters.empty()){
-        for(auto itm = monsters.begin(); itm != monsters.end(); ){
-        Monster& monster = *itm;
-            if(monster.correct_shot == false){
-                //update monster if target is not hit
-                if(monster.monsterX() >= 0){
+        if (!monsters.empty()) {
+            for (auto itm = monsters.begin(); itm != monsters.end(); ) {
+                Monster& monster = *itm;
+
+                if (monster.correct_shot) {
                     monster.erase(gameWindow);
-                    monster.update(gameWindow);
-                    monster.draw(gameWindow);
-	                if(monster.monsterX() <= 10) {
-                        //handle monster reaching the boundary
-                        pistol.draw(gameWindow);
-                        box(gameWindow, 0, 0);
-	                }
-	                ++itm;
-                } else if(monster.monsterX() < 2){
-                if(lives > 0){
-                    //decrease lives if monster is not hit
-                    lives--;
-                    if(lives == 0){
-                        isLost = true;
-                    }
+                    itm = monsters.erase(itm);
+                    continue;
                 }
 
-                //delete from vector
+                if (monster.monsterX() < 2) {
+                    if (lives > 0) {
+                        lives--;
+                        if (lives == 0) isLost = true;
+                    }
+                    monster.erase(gameWindow);
+                    itm = monsters.erase(itm);
+                    continue;
+                }
+
                 monster.erase(gameWindow);
-	            itm = monsters.erase(itm);
-                } 
+                monster.update(gameWindow);
+                monster.draw(gameWindow);
+
+                if (monster.monsterX() <= 10) {
+                    pistol.draw(gameWindow);
+                    box(gameWindow, 0, 0);
+                }
+
+                ++itm;
+            }
+
+            if (isLost) break;
+        }
+
+        int input = getch();
+
+        if (input == KEY_UP || input == KEY_DOWN) {
+            pistol.erase(gameWindow);
+            pistol.updatePistol(input);
+            pistol.draw(gameWindow);
+            wrefresh(gameWindow);
+        }
+
+        if (input == ' ') {
+            Bullet bullet;
+            bullet.initialise(8, pistol.pistolY() + 1);
+            bullets.push_back(bullet);
+            bullets.back().draw(gameWindow);
+        }
+
+        for (auto itb = bullets.begin(); itb != bullets.end(); ) {
+            Bullet& bullet = *itb;
+            bullet.erase(gameWindow);
+            bullet.update(gameWindow);
+            bullet.draw(gameWindow);
+
+            if (bullet.bulletX() >= game_Window_Size_Y - 2) {
+                bullet.erase(gameWindow);
+                itb = bullets.erase(itb);
+            } else {
+                ++itb;
             }
         }
 
-        if(isLost){
-            break;
-        }
-    }
+        for (auto itb = bullets.begin(); itb != bullets.end(); ) {
+            Bullet& bullet = *itb;
+            bool hit = false;
 
-    //handle bullet initialisation
-    int input = getch();
-    if(input == KEY_UP || input == KEY_DOWN){
-    pistol.erase(gameWindow);
-    pistol.updatePistol(input);
-    pistol.draw(gameWindow);
-    wrefresh(gameWindow);
-    }
-    if(input == ' '){
-        Bullet bullet;
-        bullet.initialise(8, pistol.pistolY() + 1);
-        bullets.push_back(bullet);
-        bullet.draw(gameWindow);
-    }
+            for (auto itm = monsters.begin(); itm != monsters.end(); ) {
+                Monster& monster = *itm;
+                if (monster.isHit(bullet.bulletX(), bullet.bulletY())) {
+                    score += 3;
+                    monster.erase(gameWindow);
+                    itm = monsters.erase(itm);
+                    hit = true;
+                    break;
+                } else {
+                    ++itm;
+                }
+            }
 
-    //handle bullet updates
-    for(auto itb = bullets.begin(); itb != bullets.end(); ){
-      //update bullet in each iteration
-      Bullet& bullet = *itb;
-      bullet.erase(gameWindow);
-      bullet.update(gameWindow);
-      bullet.draw(gameWindow);
-      if(bullet.bulletX() >= game_Window_Size_Y -2){
-        //handle bullet reaching the boundary
-        bullet.erase(gameWindow);
-	    itb = bullets.erase(itb);
-      } else {
-	    ++itb;
-      }
-    }
-
-    //handle correct target being hit
-    for(auto itb = bullets.begin(); itb != bullets.end(); ){
-	Bullet& bullet = *itb;
-	bool isHit = false;
-        for(auto itm = monsters.begin(); itm != monsters.end(); ){
-	    Monster& monster = *itm; 
-            if (monster.isHit(bullet.bulletX(), bullet.bulletY())) {
-                if (score < 10000) {
-            popup_main();
-        }
-        return 0;
-		itm = monsters.erase(itm);
-		isHit = true;
-		break;
+            if (hit) {
+                bullet.erase(gameWindow);
+                itb = bullets.erase(itb);
             } else {
-		    ++itm;
-	    }
+                ++itb;
+            }
         }
-	if(isHit) {
-	  itb = bullets.erase(itb);
-	} else {
-	  ++itb;
-	}
+
+        wrefresh(gameWindow);
+
+        if (input == 'q' || input == 'Q') break;
+
+        flushinp();
+        usleep(DELAY);
     }
 
-    //refresh window
-    wrefresh(gameWindow);
-
-    if(input == 'q' || input == 'Q'){
-        break;
-    }
-    flushinp();
-    usleep(DELAY);
-    };
-    if(isLost){
+    if (isLost) {
         popup_main();
     }
+
     endwin();
     return 0;
-};
+}
