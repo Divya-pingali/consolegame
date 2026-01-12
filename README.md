@@ -2,6 +2,9 @@
 Monster Shooter is a terminal-based shooting game built in C++ using the ncurses library.  
 The game runs entirely in the terminal and uses keyboard controls for interaction.
 
+## Game Video
+[![Monster Shooter Gameplay Demo](https://img.youtube.com/vi/5Ffa1Yp_OcQ/0.jpg)](https://youtu.be/5Ffa1Yp_OcQ)
+
 ## Overview
 
 - Monsters appear from the right side of the screen and move left
