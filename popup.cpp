@@ -20,20 +20,19 @@ int popup_main(){
     mvwprintw(popUp, 10, 36, "%s", "GAME OVER");
     mvwprintw(popUp, 11, 30 , "%s", "Your score was : ");
     mvwprintw(popUp, 11, 47, "%i", score);
-    mvwprintw(popUp, 12, 25 , "%s", "PRESS Q TO GO BACK TO THE MAIN GAME");
+    mvwprintw(popUp, 12, 25 , "%s", "PRESS Q TO EXIT THE GAME");
 
     wrefresh(popUp);
-    char input;
-    while(input != 'q' || input != 'Q'){
-        cin >> input;
+    int input = 0;
+    while(1){
+        input = wgetch(popUp);
         if(input == 'q' || input == 'Q'){
             clear();
-            /* call the main game function here
-            Example : game_main();
-            */
+            delwin(popUp);
+            endwin();
             break;
         }
+        usleep(10000);
     }
-    endwin();
     return 0;
 }
