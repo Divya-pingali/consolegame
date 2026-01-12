@@ -8,7 +8,7 @@
 #include "popup.h"
 using namespace std;
 
-#define DELAY 30000 //define the delay between each iteration in the main while loop
+#define DELAY 15000 //define the delay between each iteration in the main while loop (tuned for better responsiveness)
 
 int game_Window_Size_X = 19;
 int game_Window_Size_Y = 50;
@@ -17,31 +17,61 @@ int lives = 10;
 
 class Monster{
 public:
-    int monsterx, monstery, count = 0;
-    string monster_string = "O";
-
+    int monsterx, monstery;
+    int move_counter = 0;
+    vector<string> monster_shape = {
+        "[o_o]",
+        " /|\\",
+        " / \\"
+    };
     bool correct_shot = false;
 
     void initialise(int monsterx, int monstery){
-        this -> monsterx = monsterx;
-        this -> monstery = monstery;
+        this->monsterx = monsterx;
+        this->monstery = monstery;
     }
     void update(WINDOW* window){
-        monsterx--;
+        move_counter++;
+        if (move_counter >= 3) {
+            monsterx--;
+            move_counter = 0;
+        }
     }
     void draw(WINDOW* window){
-        mvwprintw(window, monstery, monsterx, "%s", monster_string.c_str());
+        for (int i = 0; i < 3; ++i) {
+            mvwprintw(window, monstery + i, monsterx, "%s", monster_shape[i].c_str());
+        }
     }
-
     void erase(WINDOW* window){
-        mvwprintw(window, monstery, monsterx, "%s", " ");
+        for (int i = 0; i < 3; ++i) {
+            mvwprintw(window, monstery + i, monsterx, "%s", "     ");
+        }
     }
-
-    int monsterX(){
-        return monsterx;
+    int monsterX(){ return monsterx; }
+    int monsterY(){ return monstery; }
+    int width() const { return 5; }
+    int height() const { return 3; }
+    // Check if a given (x, y) hits any part of the monster
+    bool isHit(int x, int y) const {
+        return (x >= monsterx && x < monsterx + width() &&
+                y >= monstery && y < monstery + height());
     }
-    int monsterY(){
-        return monstery;
+    // Check if this monster overlaps with another
+    bool overlapsWith(const Monster& other) const {
+        for (int i = 0; i < height(); ++i) {
+            for (int j = 0; j < width(); ++j) {
+                int x1 = monsterx + j;
+                int y1 = monstery + i;
+                for (int oi = 0; oi < other.height(); ++oi) {
+                    for (int oj = 0; oj < other.width(); ++oj) {
+                        int x2 = other.monsterx + oj;
+                        int y2 = other.monstery + oi;
+                        if (x1 == x2 && y1 == y2) return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 };
 class Bullet{
@@ -171,12 +201,22 @@ int game_main(){
     wrefresh(gameWindow);
 
     //handle condition for starting the game
-    char pre_game_input;
-    cin >> pre_game_input;
+    int pre_game_input = 0;
     bool start_game = false;
-    if(pre_game_input == 's' || pre_game_input == 'S'){
-        mvwprintw(gameWindow, 8, 18, "%s", "                ");
-        start_game = true;
+    while (!start_game) {
+        pre_game_input = getch();
+        if (pre_game_input == 's' || pre_game_input == 'S') {
+            mvwprintw(gameWindow, 8, 18, "%s", "                ");
+            wrefresh(gameWindow);
+            start_game = true;
+        } else if (pre_game_input == 'q' || pre_game_input == 'Q') {
+            delwin(gameWindow);
+            delwin(scoreWindow);
+            delwin(instructionsWindow);
+            endwin();
+            return 0;
+        }
+        usleep(10000);
     }
 
     while(start_game){
@@ -189,13 +229,24 @@ int game_main(){
 
         //game window pistol print and monster initialisation
         pistol.draw(gameWindow);
-        int monster_ypos = rand()%14 + 2;
-        int isMonsterCreate = rand()%49;
-        if(isMonsterCreate == 1){
-        Monster monster;
-           monster.initialise(game_Window_Size_Y- 2, monster_ypos);
-           monsters.push_back(monster);
-           monster.draw(gameWindow);
+        int monster_ypos = rand() % (game_Window_Size_X - 5); // leave space for 3-line monster
+        int isMonsterCreate = rand() % 49;
+        if (isMonsterCreate == 1) {
+            Monster newMonster;
+            newMonster.initialise(game_Window_Size_Y - 7, monster_ypos + 2); // leave space for border
+            // Check for overlap
+            bool overlap = false;
+            for (const auto& m : monsters) {
+                if (abs(m.monsterx - newMonster.monsterx) < newMonster.width() &&
+                    abs(m.monstery - newMonster.monstery) < newMonster.height()) {
+                    overlap = true;
+                    break;
+                }
+            }
+            if (!overlap) {
+                monsters.push_back(newMonster);
+                newMonster.draw(gameWindow);
+            }
         }
 
     //handle monster updates
@@ -272,13 +323,11 @@ int game_main(){
 	bool isHit = false;
         for(auto itm = monsters.begin(); itm != monsters.end(); ){
 	    Monster& monster = *itm; 
-            if((bullet.bulletX() >= monster.monsterX()) && bullet.bulletY() == monster.monsterY()){
-                if(score < 10000){
-                score += 3;
-                }
-                monster.correct_shot = true;
-                bullet.erase(gameWindow);
-                monster.erase(gameWindow);
+            if (monster.isHit(bullet.bulletX(), bullet.bulletY())) {
+                if (score < 10000) {
+            popup_main();
+        }
+        return 0;
 		itm = monsters.erase(itm);
 		isHit = true;
 		break;
@@ -305,7 +354,6 @@ int game_main(){
     if(isLost){
         popup_main();
     }
-    getch();
     endwin();
-return 0;
+    return 0;
 };
